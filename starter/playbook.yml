@@ -1,11 +1,48 @@
-- hosts: aws
+---
+- name: Configure AWS web servers
+  hosts: aws
   become: true
+  gather_facts: true
 
   tasks:
-    - name: Example from an Ansible Playbook
-      ping:
-      register: ping_output
+    - name: Install firewalld
+      ansible.builtin.package:
+        name: firewalld
+        state: present
 
-    - name: Output results
-      debug:
-        msg: "{{ ping_output }}"
+    - name: Start and enable firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Open required ports in firewalld
+      ansible.posix.firewalld:
+        port: "{{ item }}/tcp"
+        permanent: true
+        immediate: true
+        state: enabled
+      loop: "{{ ports }}"
+
+    - name: Configure webserver role
+      ansible.builtin.include_role:
+        name: webserver
+      vars:
+        app_root: html_demo_site-main
+        server_name: "{{ ansible_default_ipv4.address }}"
+        document_root: /var/www/html
+
+    - name: Check if companyplus directory exists
+      ansible.builtin.stat:
+        path: /var/www/html/www.companyplus.com
+      register: companyplus_dir
+
+    - name: Display directory exists message
+      ansible.builtin.debug:
+        msg: "/var/www/html/www.companyplus.com exists"
+      when: companyplus_dir.stat.exists
+
+    - name: Display error when directory does not exist
+      ansible.builtin.fail:
+        msg: "ERROR: /var/www/html/www.companyplus.com does not exist"
+      when: not companyplus_dir.stat.exists

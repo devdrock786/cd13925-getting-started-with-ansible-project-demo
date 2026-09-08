@@ -1,0 +1,58 @@
+---
+- name: Install nginx
+  ansible.builtin.package:
+    name: "{{ webserver }}"
+    state: present
+
+- name: Create required web directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: nginx
+    group: nginx
+    mode: "0770"
+  loop:
+    - /var/www/html/www.companyplus.com
+    - /var/www/html/www.companypulsar.com
+
+- name: Create application root directory
+  ansible.builtin.file:
+    path: "{{ document_root }}/{{ app_root }}"
+    state: directory
+    owner: nginx
+    group: nginx
+    mode: "0770"
+
+- name: Create a sample web page
+  ansible.builtin.copy:
+    dest: "{{ document_root }}/{{ app_root }}/index.html"
+    content: |
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>Ansible Web Server</title>
+      </head>
+      <body>
+        <h1>Web server configured successfully using Ansible</h1>
+      </body>
+      </html>
+    owner: nginx
+    group: nginx
+    mode: "0660"
+
+- name: Template nginx configuration
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nginx
+
+- name: Start and enable nginx
+  ansible.builtin.service:
+    name: "{{ webserver }}"
+    state: started
+    enabled: true
+``
