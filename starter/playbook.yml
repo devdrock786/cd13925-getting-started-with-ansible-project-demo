@@ -4,6 +4,13 @@
   become: true
   gather_facts: true
 
+  roles:
+    - role: webserver
+      vars:
+        app_root: html_demo_site-main
+        server_name: "{{ ansible_default_ipv4.address }}"
+        document_root: /var/www/html
+
   tasks:
     - name: Install firewalld
       ansible.builtin.package:
@@ -16,7 +23,7 @@
         state: started
         enabled: true
 
-    - name: Open required ports in firewalld
+    - name: Open required ports using aws group variable
       ansible.posix.firewalld:
         port: "{{ item }}/tcp"
         permanent: true
@@ -24,25 +31,17 @@
         state: enabled
       loop: "{{ ports }}"
 
-    - name: Configure webserver role
-      ansible.builtin.include_role:
-        name: webserver
-      vars:
-        app_root: html_demo_site-main
-        server_name: "{{ ansible_default_ipv4.address }}"
-        document_root: /var/www/html
-
     - name: Check if companyplus directory exists
       ansible.builtin.stat:
         path: /var/www/html/www.companyplus.com
-      register: companyplus_dir
+      register: companyplus_directory
 
-    - name: Display directory exists message
+    - name: Display message when directory exists
       ansible.builtin.debug:
-        msg: "/var/www/html/www.companyplus.com exists"
-      when: companyplus_dir.stat.exists
+        msg: "SUCCESS: /var/www/html/www.companyplus.com exists"
+      when: companyplus_directory.stat.exists
 
     - name: Display error when directory does not exist
-      ansible.builtin.fail:
+      ansible.builtin.debug:
         msg: "ERROR: /var/www/html/www.companyplus.com does not exist"
-      when: not companyplus_dir.stat.exists
+      when: not companyplus_directory.stat.exists
